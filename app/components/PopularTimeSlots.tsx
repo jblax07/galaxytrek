@@ -12,12 +12,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { format, parseISO } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 
 interface TimeVote {
   id: string;
   day: string;
   hour: number;
   vote_count: number;
+  utc_hour?: number;
+  utc_time?: string;
+  local_day?: string;
+  local_hour?: number;
 }
 
 const DAYS_OF_WEEK = [
@@ -69,18 +75,43 @@ export function PopularTimeSlots() {
     return acc;
   }, {} as Record<string, TimeVote[]>);
 
-  const formatHour = (hour: number) => {
-    // Create a date object for the current day at the specified hour
-    const date = new Date();
-    date.setHours(hour, 0, 0, 0);
+  const formatHour = (vote: TimeVote) => {
+    try {
+      // For newer records with complete UTC data
+      if (vote.utc_time) {
+        // Parse the stored UTC ISO string
+        const utcDate = parseISO(vote.utc_time);
 
-    // Format the time based on the user's locale
-    return new Intl.DateTimeFormat(undefined, {
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true,
-      timeZone,
-    }).format(date);
+        // Convert from UTC to the selected timezone
+        const localDate = toZonedTime(utcDate, timeZone);
+
+        return format(localDate, 'h:mm a');
+      }
+      // For records with just the UTC hour
+      else {
+        // Use the hour directly from the database (which is now UTC)
+        const utcHour = vote.hour;
+
+        // Create a UTC date with that hour
+        const today = new Date();
+        const utcDate = new Date(
+          Date.UTC(
+            today.getUTCFullYear(),
+            today.getUTCMonth(),
+            today.getUTCDate(),
+            utcHour
+          )
+        );
+
+        // Convert to the display timezone
+        const localDate = toZonedTime(utcDate, timeZone);
+        return format(localDate, 'h:mm a');
+      }
+    } catch (error) {
+      console.error('Error formatting time:', error, vote);
+      // Fallback: show the UTC hour directly
+      return `${vote.hour}:00 UTC`;
+    }
   };
 
   const sortedDays = Object.keys(votesByDay).sort((a, b) => {
@@ -148,7 +179,15 @@ export function PopularTimeSlots() {
                         variant={vote.vote_count > 2 ? 'default' : 'outline'}
                         className='px-3 py-1'
                       >
-                        {formatHour(vote.hour)} ({vote.vote_count})
+                        <div>
+                          {formatHour(vote)}
+                          <span className='text-xs ml-1 opacity-60'>
+                            ({vote.vote_count})
+                          </span>
+                        </div>
+                        <div className='text-xs opacity-60'>
+                          UTC {vote.hour}:00
+                        </div>
                       </Badge>
                     ))}
                 </div>

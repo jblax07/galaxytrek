@@ -62,10 +62,12 @@ export function TimeZoneScheduler() {
   // Fetch existing votes from the database
   const fetchVotes = async () => {
     try {
-      // This would be replaced with your actual API call
+      console.log('Fetching votes from API');
       const response = await fetch('/api/time-votes');
       if (!response.ok) throw new Error('Failed to fetch votes');
-      return (await response.json()) as TimeVote[];
+      const data = (await response.json()) as TimeVote[];
+      console.log('Received votes data:', data);
+      return data;
     } catch (error) {
       console.error('Error fetching votes:', error);
       toast.error('Failed to load existing votes');
@@ -92,13 +94,37 @@ export function TimeZoneScheduler() {
           // Create date object for this hour in local timezone
           const localDate = addHours(start, hour);
 
-          // Convert to UTC for storage
-          const utcDate = fromZonedTime(localDate, timeZone);
+          // Calculate UTC hour using the timezone offset
+          const offsetInHours = localDate.getTimezoneOffset() / 60;
+          let utcHour = (hour + offsetInHours) % 24;
+          if (utcHour < 0) utcHour += 24;
 
-          // Find if there are any votes for this day and hour
+          // Create UTC date object
+          const utcDate = new Date(localDate);
+          // Handle day boundary crossing
+          if (hour + offsetInHours < 0) {
+            utcDate.setDate(utcDate.getDate() - 1);
+          } else if (hour + offsetInHours >= 24) {
+            utcDate.setDate(utcDate.getDate() + 1);
+          }
+          utcDate.setHours(utcHour, 0, 0, 0);
+
+          // Get the day in UTC
+          const utcDay = DAYS_OF_WEEK[utcDate.getDay()];
+
+          console.log(`Hour ${hour} local -> UTC hour ${utcHour} on ${utcDay}`);
+
+          // Find if there are any votes for this UTC day and hour
           const voteData = votes.find(
-            (v) => v.day === dayName && v.hour === hour
+            (v) => v.day === utcDay && v.hour === utcHour
           );
+
+          if (voteData) {
+            console.log(
+              `Found vote for ${utcDay} at UTC hour ${utcHour}:`,
+              voteData
+            );
+          }
 
           const slotKey = `${dayName}-${hour}`;
 
@@ -142,13 +168,61 @@ export function TimeZoneScheduler() {
     try {
       const votesToSubmit = Array.from(selectedSlots).map((slotKey) => {
         const [day, hourStr] = slotKey.split('-');
+        const localHour = parseInt(hourStr);
+
+        // Create a date object for this slot in the user's timezone
+        const selectedDate = date || new Date();
+        const localDate = new Date(selectedDate);
+        localDate.setHours(localHour, 0, 0, 0);
+
+        // Get timezone offset in hours (positive for west of UTC, negative for east)
+        const offsetInHours = localDate.getTimezoneOffset() / 60;
+
+        // Calculate UTC hour mathematically (add offset since getTimezoneOffset is inverted)
+        // Note: This handles day boundary crossing automatically
+        let utcHour = (localHour + offsetInHours) % 24;
+        if (utcHour < 0) utcHour += 24; // Handle negative hours
+
+        // Calculate the proper UTC date
+        const utcDate = new Date(localDate);
+        // Adjust date if crossing day boundary
+        if (localHour + offsetInHours < 0) {
+          // If local + offset is negative, we went back a day
+          utcDate.setDate(utcDate.getDate() - 1);
+        } else if (localHour + offsetInHours >= 24) {
+          // If local + offset >= 24, we went forward a day
+          utcDate.setDate(utcDate.getDate() + 1);
+        }
+        utcDate.setHours(utcHour, 0, 0, 0);
+
+        // Get the day in UTC
+        const utcDay = DAYS_OF_WEEK[utcDate.getDay()];
+
+        console.log('Converting local to UTC:', {
+          localDay: day,
+          localDate: localDate.toString(),
+          localHour: localHour,
+          offsetInHours: offsetInHours,
+          utcDay: utcDay,
+          utcDate: utcDate.toString(),
+          utcHour: utcHour,
+          mathCalculation: `${localHour} + ${offsetInHours} = ${
+            localHour + offsetInHours
+          } % 24 = ${utcHour}`,
+        });
+
         return {
-          day,
-          hour: parseInt(hourStr),
+          day: utcDay, // Use the UTC day
+          hour: utcHour, // Store the UTC hour
+          utc_hour: utcHour,
+          utc_time: utcDate.toISOString(),
+          local_day: day,
+          local_hour: localHour,
         };
       });
 
-      // This would be replaced with your actual API call
+      console.log('Submitting votes:', votesToSubmit);
+
       const response = await fetch('/api/time-votes', {
         method: 'POST',
         headers: {
@@ -160,8 +234,6 @@ export function TimeZoneScheduler() {
       if (!response.ok) throw new Error('Failed to submit votes');
 
       toast.success('Your availability has been recorded');
-
-      // Clear selections after successful submission
       setSelectedSlots(new Set());
     } catch (error) {
       console.error('Error submitting votes:', error);
@@ -250,8 +322,17 @@ export function TimeZoneScheduler() {
                     <div className='text-sm font-medium'>
                       {format(slot.localTime, 'h:mm a')}
                     </div>
+                    <div className='text-xs text-gray-500'>
+                      UTC: {format(slot.utcTime, 'HH:mm')}
+                      {slot.utcTime.getDay() !== slot.date.getDay() && (
+                        <span className='ml-1'>
+                          ({DAYS_OF_WEEK[slot.utcTime.getDay()].substring(0, 3)}
+                          )
+                        </span>
+                      )}
+                    </div>
                     {slot.votes > 0 && (
-                      <div className='text-xs text-blue-600 font-medium mt-1'>
+                      <div className='text-xs text-blue-500 mt-1'>
                         {slot.votes} {slot.votes === 1 ? 'vote' : 'votes'}
                       </div>
                     )}

@@ -12,6 +12,8 @@ export type TimeSlotWithVotes = {
   time: string;
   utcTime: string;
   hour: number;
+  utcDay: string;
+  utcHour: number;
   voteCount: number;
   selected: boolean;
 };

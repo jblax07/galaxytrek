@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { getVoteCounts, updateVoteCount } from '@/lib/db/supabase';
 import { TimeVote, TimeSlotWithVotes } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface EventTimePollProps {
   availableTimes: string[];
@@ -17,6 +18,9 @@ export function EventTimePoll({
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [voteCounts, setVoteCounts] = useState<TimeVote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [timezone, setTimezone] = useState<string>(
+    Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
 
   useEffect(() => {
     loadVoteCounts();
@@ -29,26 +33,125 @@ export function EventTimePoll({
     setIsLoading(false);
   };
 
-  // Generate time slots in UTC
+  // Function to convert local time to UTC
+  const localToUTC = (
+    localHour: number
+  ): { utcHour: number; utcDay: number } => {
+    // Create a date object for today at the specified local hour
+    const today = new Date();
+    const localDate = new Date(today);
+    localDate.setHours(localHour, 0, 0, 0);
+
+    // Get the timezone offset in hours (minutes ÷ 60)
+    const offsetInHours = localDate.getTimezoneOffset() / 60;
+
+    // Calculate UTC hour (add offset since getTimezoneOffset returns negative for east)
+    let utcHour = (localHour + offsetInHours) % 24;
+    if (utcHour < 0) utcHour += 24;
+
+    // Determine if we crossed a day boundary
+    let utcDay = localDate.getDay();
+    if (localHour + offsetInHours < 0) {
+      // We went back a day
+      utcDay = (utcDay - 1 + 7) % 7;
+    } else if (localHour + offsetInHours >= 24) {
+      // We went forward a day
+      utcDay = (utcDay + 1) % 7;
+    }
+
+    return { utcHour, utcDay };
+  };
+
+  // Function to convert UTC time to local
+  const UTCToLocal = (
+    utcHour: number,
+    utcDay: number
+  ): { localHour: number; localDay: number } => {
+    // Create a date object for UTC time
+    const today = new Date();
+    const utcDate = new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate(),
+        utcHour
+      )
+    );
+
+    // Convert to local time
+    const localDate = new Date(utcDate);
+
+    // Extract local hour and day
+    const localHour = localDate.getHours();
+    const localDay = localDate.getDay();
+
+    return { localHour, localDay };
+  };
+
+  // Generate time slots
   const generateTimeSlots = () => {
     const slots: TimeSlotWithVotes[] = [];
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayIndexMap: Record<string, number> = {
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+      Sun: 0,
+    };
 
     // Create time slots from 0100 to 2400
     for (let hour = 1; hour <= 24; hour++) {
       const formattedHour = `${hour.toString().padStart(2, '0')}00`;
 
       days.forEach((day) => {
-        // Find vote count for this slot
+        // Convert local display time to UTC for finding votes
+        const dayIndex = dayIndexMap[day];
+        const today = new Date();
+        today.setDate(today.getDate() + ((dayIndex - today.getDay() + 7) % 7));
+
+        // Create a date for this local time
+        const localDate = new Date(today);
+        const actualHour = hour === 24 ? 0 : hour;
+        localDate.setHours(actualHour, 0, 0, 0);
+
+        // Get timezone offset and calculate UTC
+        const offsetInHours = localDate.getTimezoneOffset() / 60;
+        let utcHour = (actualHour + offsetInHours) % 24;
+        if (utcHour < 0) utcHour += 24;
+
+        // Determine if we crossed a day boundary
+        let utcDayIndex = dayIndex;
+        if (actualHour + offsetInHours < 0) {
+          // We went back a day
+          utcDayIndex = (utcDayIndex - 1 + 7) % 7;
+        } else if (actualHour + offsetInHours >= 24) {
+          // We went forward a day
+          utcDayIndex = (utcDayIndex + 1) % 7;
+        }
+        const utcDay = days[utcDayIndex === 0 ? 6 : utcDayIndex - 1];
+
+        // Find vote count for this UTC slot
         const voteData = voteCounts.find(
-          (v) => v.day === day && v.hour === hour
+          (v) => v.day === utcDay && v.hour === utcHour
+        );
+
+        // For debugging
+        console.log(
+          `Local ${day} ${formattedHour} → UTC ${utcDay} ${utcHour
+            .toString()
+            .padStart(2, '0')}:00`
         );
 
         slots.push({
           day,
           time: formattedHour,
-          utcTime: `${hour.toString().padStart(2, '0')}:00`,
-          hour,
+          utcTime: `${utcHour.toString().padStart(2, '0')}:00`,
+          utcDay,
+          hour: actualHour,
+          utcHour,
           voteCount: voteData?.vote_count || 0,
           selected: false,
         });
@@ -69,13 +172,14 @@ export function EventTimePoll({
   const handleSlotClick = async (
     day: string,
     utcTime: string,
-    hour: number
+    utcDay: string,
+    utcHour: number
   ) => {
     const slotId = `${day}-${utcTime}`;
     const isSelected = selectedSlots.has(slotId);
 
     try {
-      await updateVoteCount(day, hour, !isSelected);
+      await updateVoteCount(utcDay, utcHour, !isSelected);
       await loadVoteCounts(); // Refresh vote counts
 
       setSelectedSlots((prev) => {
@@ -129,8 +233,7 @@ export function EventTimePoll({
           Select Your Available Times
         </h2>
         <p className='text-xs text-gray-500 mt-1'>
-          Times shown in your local timezone (
-          {Intl.DateTimeFormat().resolvedOptions().timeZone})
+          Times shown in your local timezone ({timezone})
         </p>
       </div>
 
@@ -179,13 +282,18 @@ export function EventTimePoll({
                       <td
                         key={slotId}
                         onClick={() =>
-                          handleSlotClick(day, slot.utcTime, slot.hour)
+                          handleSlotClick(
+                            day,
+                            slot.utcTime,
+                            slot.utcDay,
+                            slot.utcHour
+                          )
                         }
                         className={`w-14 h-8 text-center cursor-pointer transition-colors ${getBackgroundColor(
                           slot.voteCount,
                           isSelected
                         )}`}
-                        title={`${day} ${timeSlot.time} (${slot.voteCount} votes)`}
+                        title={`${day} ${timeSlot.time} → UTC ${slot.utcDay} ${slot.utcTime} (${slot.voteCount} votes)`}
                       >
                         <div className='w-full h-full flex items-center justify-center'>
                           {isSelected ? (
