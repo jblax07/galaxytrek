@@ -1,5 +1,3 @@
 {
-  "version": 2,
-  "buildCommand": "npm install --legacy-peer-deps && npm run build",
-  "installCommand": "npm install --legacy-peer-deps"
+  "buildCommand": "npm install postcss-import postcss-nesting autoprefixer --legacy-peer-deps && npm run build"
 } 
