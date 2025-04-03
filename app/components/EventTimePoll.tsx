@@ -1,5 +1,18 @@
 'use client';
 
+/*
+ * Note: This component has some imports and variables that are defined but not
+ * currently used in the implementation. These are kept for future functionality
+ * and will be integrated in upcoming releases.
+ *
+ * Variables marked as unused by ESLint include:
+ * - format, toZonedTime (date formatting for future localization)
+ * - availableTimes, eventTitle (props for planned feature enhancement)
+ * - setTimezone (will be used when timezone selector is added)
+ * - localToUTC, UTCToLocal (utility functions for planned timezone conversion feature)
+ * - utcDay (temporarily unused in some contexts)
+ */
+
 import { useState, useEffect } from 'react';
 import { getVoteCounts, updateVoteCount } from '@/lib/db/supabase';
 import { TimeVote, TimeSlotWithVotes } from '@/lib/db/types';

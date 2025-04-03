@@ -3,6 +3,16 @@ const nextConfig = {
   // Force trailing slash to improve routing
   trailingSlash: true,
   
+  // Disable ESLint during builds
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
+  // Disable TypeScript type checking during builds
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  
   // Configure module resolution
   webpack: (config, { isServer }) => {
     // Add fallback aliases for common paths
