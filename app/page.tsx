@@ -2,12 +2,19 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerTrigger } from '@/components/ui/drawer';
 import { EventTimeDrawer } from './components/EventTimeDrawer';
+import HyperdriveWrapper from './components/HyperdriveWrapper';
 
 export default function Home() {
   return (
     <main className='min-h-screen bg-black overflow-hidden relative'>
-      {/* Hyperspace background */}
-      <div className='fixed inset-0 overflow-hidden'>
+      {/* Hyperdrive background */}
+      <HyperdriveWrapper
+        starCount={300}
+        speed={1.5}
+      />
+
+      {/* Original Hyperspace background */}
+      <div className='fixed inset-0 overflow-hidden pointer-events-none'>
         <div className='stars'></div>
         <div
           className='stars'
