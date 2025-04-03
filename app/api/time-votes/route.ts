@@ -2,11 +2,21 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  '';
 
 // Create a single supabase client for interacting with your database
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Add warning about missing service role key
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn(
+    'SUPABASE_SERVICE_ROLE_KEY is not defined. Falling back to public anon key which may limit functionality.'
+  );
+}
 
 interface TimeVote {
   day: string;
