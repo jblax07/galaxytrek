@@ -5,6 +5,7 @@ import { getVoteCounts, updateVoteCount } from '@/lib/db/supabase';
 import { TimeVote, TimeSlotWithVotes } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 
 interface EventTimePollProps {
   availableTimes: string[];
