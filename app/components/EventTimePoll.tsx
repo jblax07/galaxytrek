@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { getVoteCounts, updateVoteCount } from '@/lib/db/supabase';
+import { getVoteCounts } from '@/lib/db/supabase';
 import { TimeVote, TimeSlotWithVotes } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -23,11 +23,15 @@ import { toZonedTime } from 'date-fns-tz';
 interface EventTimePollProps {
   availableTimes: string[];
   eventTitle: string;
+  onSelectionChange?: (
+    selections: Array<{ day: string; hour: number }>
+  ) => void;
 }
 
 export function EventTimePoll({
   availableTimes,
   eventTitle,
+  onSelectionChange,
 }: EventTimePollProps) {
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [voteCounts, setVoteCounts] = useState<TimeVote[]>([]);
@@ -36,9 +40,19 @@ export function EventTimePoll({
     Intl.DateTimeFormat().resolvedOptions().timeZone
   );
 
+  // Track selections for submission
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<
+    Array<{ day: string; hour: number }>
+  >([]);
+
   useEffect(() => {
     loadVoteCounts();
   }, []);
+
+  // Update parent component when selections change
+  useEffect(() => {
+    onSelectionChange?.(selectedTimeSlots);
+  }, [selectedTimeSlots, onSelectionChange]);
 
   const loadVoteCounts = async () => {
     setIsLoading(true);
@@ -152,13 +166,6 @@ export function EventTimePoll({
           (v) => v.day === utcDay && v.hour === utcHour
         );
 
-        // For debugging
-        console.log(
-          `Local ${day} ${formattedHour} → UTC ${utcDay} ${utcHour
-            .toString()
-            .padStart(2, '0')}:00`
-        );
-
         slots.push({
           day,
           time: formattedHour,
@@ -183,7 +190,7 @@ export function EventTimePoll({
     new Map(timeSlots.map((slot) => [slot.hour, slot])).values()
   ).sort((a, b) => a.hour - b.hour);
 
-  const handleSlotClick = async (
+  const handleSlotClick = (
     day: string,
     utcTime: string,
     utcDay: string,
@@ -192,22 +199,29 @@ export function EventTimePoll({
     const slotId = `${day}-${utcTime}`;
     const isSelected = selectedSlots.has(slotId);
 
-    try {
-      await updateVoteCount(utcDay, utcHour, !isSelected);
-      await loadVoteCounts(); // Refresh vote counts
+    // Update local state only, without making API calls
+    setSelectedSlots((prev) => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.delete(slotId);
+      } else {
+        newSet.add(slotId);
+      }
+      return newSet;
+    });
 
-      setSelectedSlots((prev) => {
-        const newSet = new Set(prev);
-        if (isSelected) {
-          newSet.delete(slotId);
-        } else {
-          newSet.add(slotId);
-        }
-        return newSet;
-      });
-    } catch (error) {
-      console.error('Error updating vote:', error);
-    }
+    // Update the selected time slots for submission
+    setSelectedTimeSlots((prev) => {
+      if (isSelected) {
+        // Remove the slot if it was previously selected
+        return prev.filter(
+          (slot) => !(slot.day === utcDay && slot.hour === utcHour)
+        );
+      } else {
+        // Add the slot if it wasn't previously selected
+        return [...prev, { day: utcDay, hour: utcHour }];
+      }
+    });
   };
 
   // Calculate the maximum vote count for intensity scaling
