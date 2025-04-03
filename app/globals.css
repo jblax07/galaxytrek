@@ -41,35 +41,4 @@ body {
 .hyperdrive-accelerated {
   transform: translateZ(0);
   backface-visibility: hidden;
-}
-
-/* Original stars animation */
-@keyframes stars-animation {
-  0% { opacity: 0; transform: translateY(0); }
-  50% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-100px); }
-}
-
-.stars {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    radial-gradient(2px 2px at 20px 30px, white, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 40px 70px, white, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 50px 160px, white, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 90px 40px, white, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 130px 80px, white, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 160px 120px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 200px 50px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 240px 90px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 280px 180px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 320px 30px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 360px 130px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 400px 200px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 450px 80px, white, rgba(0,0,0,0)),
-    radial-gradient(1px 1px at 490px 140px, white, rgba(0,0,0,0));
-  background-repeat: repeat;
-  background-size: 500px 500px;
-  animation: stars-animation 30s linear infinite;
 } 

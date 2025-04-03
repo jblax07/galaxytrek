@@ -5,14 +5,20 @@ import { useEffect, useState } from 'react';
 interface HyperdriveBackgroundProps {
   starCount?: number;
   speed?: number;
+  distantStarCount?: number;
 }
 
 const HyperdriveBackground = ({
   starCount = 200,
   speed = 1,
+  distantStarCount = 150,
 }: HyperdriveBackgroundProps) => {
   const [stars, setStars] = useState<
     Array<{ x: number; y: number; z: number; size: number }>
+  >([]);
+
+  const [distantStars, setDistantStars] = useState<
+    Array<{ x: number; y: number; size: number }>
   >([]);
 
   useEffect(() => {
@@ -24,6 +30,14 @@ const HyperdriveBackground = ({
       size: Math.random() * 1.2 + 0.3, // Smaller stars overall
     }));
     setStars(newStars);
+
+    // Generate distant stars as tiny specs
+    const newDistantStars = Array.from({ length: distantStarCount }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      size: Math.random() * 0.6 + 0.1, // Tiny specs
+    }));
+    setDistantStars(newDistantStars);
 
     // Animation loop
     let frameId: number;
@@ -57,10 +71,29 @@ const HyperdriveBackground = ({
 
     frameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameId);
-  }, [starCount, speed]);
+  }, [starCount, speed, distantStarCount]);
 
   return (
     <div className='fixed inset-0 bg-black overflow-hidden'>
+      {/* Distant stars - static tiny specs */}
+      {distantStars.map((star, i) => (
+        <div
+          key={`distant-${i}`}
+          style={{
+            position: 'absolute',
+            left: `${star.x}px`,
+            top: `${star.y}px`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            opacity: 0.7,
+            backgroundColor: 'white',
+            borderRadius: '50%',
+            transform: 'translateZ(0)',
+          }}
+        />
+      ))}
+
+      {/* Moving hyperdrive stars */}
       {stars.map((star, i) => {
         // Calculate perspective
         const scale = 1000 / Math.max(1, star.z);

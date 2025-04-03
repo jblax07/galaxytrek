@@ -10,16 +10,19 @@ const HyperdriveBackground = dynamic(() => import('./HyperdriveBackground'), {
 interface HyperdriveWrapperProps {
   starCount?: number;
   speed?: number;
+  distantStarCount?: number;
 }
 
 const HyperdriveWrapper = ({
   starCount = 300,
   speed = 1.5,
+  distantStarCount = 200,
 }: HyperdriveWrapperProps) => {
   return (
     <HyperdriveBackground
       starCount={starCount}
       speed={speed}
+      distantStarCount={distantStarCount}
     />
   );
 };

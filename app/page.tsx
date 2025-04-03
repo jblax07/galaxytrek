@@ -11,56 +11,8 @@ export default function Home() {
       <HyperdriveWrapper
         starCount={300}
         speed={1.5}
+        distantStarCount={250}
       />
-
-      {/* Original Hyperspace background */}
-      <div className='fixed inset-0 overflow-hidden pointer-events-none'>
-        <div className='stars'></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-0.15s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-0.3s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-0.45s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-0.6s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-0.75s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-0.9s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-1.05s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-1.2s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-1.35s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-1.5s' }}
-        ></div>
-        <div
-          className='stars'
-          style={{ animationDelay: '-1.65s' }}
-        ></div>
-      </div>
 
       {/* Hero Section */}
       <div className='w-full flex flex-col items-center justify-center min-h-screen relative z-10'>
@@ -89,9 +41,8 @@ export default function Home() {
           <EventTimeDrawer />
         </Drawer>
 
-        {/* Animated background elements */}
+        {/* Horizontal lines effect */}
         <div className='absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden'>
-          <div className='stars absolute w-full h-full opacity-50'></div>
           {/* Horizontal lines effect */}
           <div className='absolute w-full h-full bg-[linear-gradient(0deg,transparent_50%,rgba(255,255,255,0.1)_50%)] bg-[length:100%_4px]'></div>
         </div>
