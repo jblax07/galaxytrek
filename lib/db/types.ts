@@ -10,6 +10,7 @@ export type TimeVote = {
 export type TimeSlotWithVotes = {
   day: string;
   time: string;
+  time12?: string;
   utcTime: string;
   hour: number;
   utcDay: string;

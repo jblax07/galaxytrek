@@ -134,6 +134,23 @@ export function EventTimePoll({
     for (let hour = 1; hour <= 24; hour++) {
       const formattedHour = `${hour.toString().padStart(2, '0')}00`;
 
+      // Add 12-hour format
+      let period = 'AM';
+      let hour12 = hour;
+
+      if (hour === 12) {
+        period = 'PM';
+      } else if (hour === 24) {
+        hour12 = 12;
+        period = 'AM';
+      } else if (hour > 12) {
+        hour12 = hour - 12;
+        period = 'PM';
+      }
+
+      const formattedHour12 = `${hour12}${period}`;
+      const formattedHour12WithSpace = `${hour12} ${period}`;
+
       days.forEach((day) => {
         // Convert local display time to UTC for finding votes
         const dayIndex = dayIndexMap[day];
@@ -169,6 +186,7 @@ export function EventTimePoll({
         slots.push({
           day,
           time: formattedHour,
+          time12: formattedHour12WithSpace,
           utcTime: `${utcHour.toString().padStart(2, '0')}:00`,
           utcDay,
           hour: actualHour,
@@ -263,85 +281,103 @@ export function EventTimePoll({
         <p className='text-xs text-gray-500 mt-1'>
           Times shown in your local timezone ({timezone})
         </p>
+        <p className='text-sm text-gray-700 mt-2 font-medium'>
+          Select the day and times available. Please ensure your selections are
+          correct before submitting.
+        </p>
+        {/* <p className='text-red-700 font-thin text-sm'>
+          (Do not do math for timezones unless your computer is not using your
+          local timezone)
+        </p> */}
       </div>
 
       <div className='relative'>
-        {/* Fixed header */}
-        <div className='sticky top-0 z-20 bg-white'>
-          <table className='w-full border-collapse'>
-            <thead>
-              <tr className='border-b border-gray-200'>
-                <th className='w-16 h-8 px-3 text-right bg-gray-50 text-xs font-medium text-gray-500 sticky left-0 z-30'></th>
-                {days.map((day) => (
-                  <th
-                    key={day}
-                    className='w-14 h-8 text-center font-medium text-gray-500 bg-gray-50 text-xs tracking-wider'
-                  >
-                    {day}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-          </table>
-        </div>
-
-        {/* Scrollable body */}
-        <div className='overflow-y-auto'>
-          <table className='w-full border-collapse bg-white'>
-            <tbody className='divide-y divide-gray-100'>
-              {uniqueTimeSlots.map((timeSlot) => (
-                <tr
-                  key={`row-${timeSlot.hour}`}
-                  className='hover:bg-gray-50/50'
+        {/* Use a single table with fixed header */}
+        <table className='w-full border-collapse table-fixed'>
+          <colgroup>
+            <col className='w-[90px]' />
+            <col className='w-[calc((100%-90px)/7)]' />
+            <col className='w-[calc((100%-90px)/7)]' />
+            <col className='w-[calc((100%-90px)/7)]' />
+            <col className='w-[calc((100%-90px)/7)]' />
+            <col className='w-[calc((100%-90px)/7)]' />
+            <col className='w-[calc((100%-90px)/7)]' />
+            <col className='w-[calc((100%-90px)/7)]' />
+          </colgroup>
+          <thead className='sticky top-0 z-20 bg-white'>
+            <tr className='border-b border-gray-200'>
+              <th className='px-1 bg-gray-50 text-left text-xs font-medium text-gray-500 sticky left-0 z-30'>
+                <div className='flex justify-between gap-1'>
+                  <span>12hr</span>
+                  <span>24hr</span>
+                </div>
+              </th>
+              {days.map((day) => (
+                <th
+                  key={day}
+                  className='h-8 text-center font-medium text-gray-500 bg-gray-50 text-xs tracking-wider'
                 >
-                  <td className='w-16 h-8 px-3 text-xs font-medium text-gray-500 bg-gray-50/50 sticky left-0 border-r border-gray-100 text-right'>
-                    {timeSlot.time}
-                  </td>
-                  {days.map((day) => {
-                    const slot = timeSlots.find(
-                      (s) => s.day === day && s.hour === timeSlot.hour
-                    );
-                    if (!slot) return null;
-
-                    const slotId = `${day}-${slot.utcTime}`;
-                    const isSelected = selectedSlots.has(slotId);
-
-                    return (
-                      <td
-                        key={slotId}
-                        onClick={() =>
-                          handleSlotClick(
-                            day,
-                            slot.utcTime,
-                            slot.utcDay,
-                            slot.utcHour
-                          )
-                        }
-                        className={`w-14 h-8 text-center cursor-pointer transition-colors ${getBackgroundColor(
-                          slot.voteCount,
-                          isSelected
-                        )}`}
-                        title={`${day} ${timeSlot.time} → UTC ${slot.utcDay} ${slot.utcTime} (${slot.voteCount} votes)`}
-                      >
-                        <div className='w-full h-full flex items-center justify-center'>
-                          {isSelected ? (
-                            <span className='text-white'>✓</span>
-                          ) : slot.voteCount > 0 ? (
-                            <span className='text-gray-600 text-xs'>
-                              {slot.voteCount}
-                            </span>
-                          ) : (
-                            <span className='text-transparent'>·</span>
-                          )}
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
+                  {day}
+                </th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody className='divide-y divide-gray-100'>
+            {uniqueTimeSlots.map((timeSlot) => (
+              <tr
+                key={`row-${timeSlot.hour}`}
+                className='hover:bg-gray-50/50'
+              >
+                <td className='px-1 py-1 text-xs font-medium text-gray-500 bg-gray-50/50 sticky left-0 border-r border-gray-100'>
+                  <div className='flex justify-between gap-1'>
+                    <span>{timeSlot.time12}</span>
+                    <span>{timeSlot.time}</span>
+                  </div>
+                </td>
+                {days.map((day) => {
+                  const slot = timeSlots.find(
+                    (s) => s.day === day && s.hour === timeSlot.hour
+                  );
+                  if (!slot) return null;
+
+                  const slotId = `${day}-${slot.utcTime}`;
+                  const isSelected = selectedSlots.has(slotId);
+
+                  return (
+                    <td
+                      key={slotId}
+                      onClick={() =>
+                        handleSlotClick(
+                          day,
+                          slot.utcTime,
+                          slot.utcDay,
+                          slot.utcHour
+                        )
+                      }
+                      className={`h-8 text-center cursor-pointer transition-colors ${getBackgroundColor(
+                        slot.voteCount,
+                        isSelected
+                      )}`}
+                      title={`${day} ${timeSlot.time} (${timeSlot.time12}) → UTC ${slot.utcDay} ${slot.utcTime} (${slot.voteCount} votes)`}
+                    >
+                      <div className='w-full h-full flex items-center justify-center'>
+                        {isSelected ? (
+                          <span className='text-white'>✓</span>
+                        ) : slot.voteCount > 0 ? (
+                          <span className='text-gray-600 text-xs'>
+                            {slot.voteCount}
+                          </span>
+                        ) : (
+                          <span className='text-transparent'>·</span>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
